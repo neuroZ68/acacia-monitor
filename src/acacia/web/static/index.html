@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Acacia Camera</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header class="top">
+    <div class="status">
+      <div id="state" class="state s-unknown" role="status" aria-live="polite">UNKNOWN</div>
+      <div class="status-text">
+        <div id="reason">connecting</div>
+        <div id="lastKnown" class="dim"></div>
+      </div>
+    </div>
+    <div class="chips">
+      <span id="chipStream" class="chip">Stream</span>
+      <span id="chipCal" class="chip">Calibration</span>
+      <span id="chipDet" class="chip">Detector</span>
+    </div>
+    <div class="clock" title="This Mac's clock, for latency trials"><span id="clock">--:--:--.---</span></div>
+  </header>
+
+  <main>
+    <section class="stage">
+      <div class="view-wrap" id="viewWrap">
+        <canvas id="view" width="1280" height="720"></canvas>
+        <div id="banner" class="banner" hidden></div>
+      </div>
+      <div id="editHint" class="edit-hint" hidden></div>
+      <div class="legend">
+        <span><i class="sw sw-cushion"></i>Cushion</span>
+        <span><i class="sw sw-on"></i>Dog, ON evidence</span>
+        <span><i class="sw sw-amb"></i>Dog, ambiguous</span>
+        <span><i class="sw sw-off"></i>Dog, off couch</span>
+        <span><i class="sw sw-none"></i>Dog, not classified</span>
+        <span><i class="sw sw-person"></i>Person (context only)</span>
+      </div>
+    </section>
+
+    <aside class="side">
+      <nav class="tabs" role="tablist">
+        <button role="tab" data-tab="evidence" class="active">Evidence</button>
+        <button role="tab" data-tab="events">Events</button>
+        <button role="tab" data-tab="cushions">Cushions</button>
+        <button role="tab" data-tab="validate">Validate</button>
+        <button role="tab" data-tab="cue">Cue</button>
+        <button role="tab" data-tab="settings">Settings</button>
+        <button role="tab" data-tab="health">Health</button>
+      </nav>
+
+      <section id="tab-evidence" class="panel">
+        <h2>This frame</h2>
+        <dl class="kv" id="evidenceSummary"></dl>
+        <h2>Timers</h2>
+        <div class="meter"><label>ON confirm <span id="onTimerText"></span></label><progress id="onTimer" max="1" value="0"></progress></div>
+        <div class="meter"><label>Clear confirm <span id="clearTimerText"></span></label><progress id="clearTimer" max="1" value="0"></progress></div>
+        <h2>Dogs</h2>
+        <p class="note">Detector confidence and couch support are separate. Confidence says "is this a dog"; support says "is it on a cushion".</p>
+        <div id="dogList"></div>
+      </section>
+
+      <section id="tab-events" class="panel" hidden>
+        <div class="row">
+          <label>Show <select id="eventTier">
+            <option value="">All</option>
+            <option value="confirmed">Confirmed</option>
+            <option value="raw">Raw candidates</option>
+            <option value="cue">Voice cue</option>
+            <option value="system">System</option>
+          </select></label>
+        </div>
+        <ol id="eventList" class="events"></ol>
+      </section>
+
+      <section id="tab-cushions" class="panel" hidden>
+        <dl class="kv" id="calSummary"></dl>
+        <div class="row" id="calActions">
+          <button id="calEdit" class="primary">Edit cushions</button>
+          <button id="calMoved" class="warn">Camera moved</button>
+        </div>
+        <div class="row" id="calEditActions" hidden>
+          <button id="calAdd">Add polygon</button>
+          <button id="calSave" class="primary">Save</button>
+          <button id="calCancel">Cancel</button>
+        </div>
+        <p id="calError" class="error" hidden></p>
+        <ul id="polyList" class="polys"></ul>
+        <p class="note">Draw on the live view, around the seat surface a dog would rest on. Automatic camera-movement detection is not implemented: if the camera shifts, press Camera moved and redraw.</p>
+      </section>
+
+      <section id="tab-validate" class="panel" hidden>
+        <p class="note">Log what you actually saw, as it happens. These marks are the ground truth for <code>./acacia score</code>. Nothing is captured except the time and your note.</p>
+        <div class="row">
+          <button data-mark="on_start" class="primary">Dog got ON</button>
+          <button data-mark="on_end" class="primary">Dog got OFF</button>
+          <button data-mark="action">Timing mark</button>
+        </div>
+        <div class="row grow">
+          <input id="markNote" type="text" maxlength="200" placeholder="Note: lighting, posture, people" aria-label="Note">
+          <button data-mark="note">Add note</button>
+        </div>
+        <ol id="truthList" class="events"></ol>
+      </section>
+
+      <section id="tab-cue" class="panel" hidden>
+        <p class="note">While disarmed, nothing plays. Each confirmed ON is only logged as what the cue would have done, which you can review in Events. The app always starts disarmed.</p>
+        <div class="row">
+          <button id="cueArm" class="warn">Arm cue</button>
+          <button id="cueDisarm" hidden>Disarm</button>
+        </div>
+        <p id="cueError" class="error" hidden></p>
+        <dl class="kv" id="cueStatus"></dl>
+      </section>
+
+      <section id="tab-settings" class="panel" hidden>
+        <p class="note">Starting values are hypotheses to validate. Changes apply at once and persist across restarts.</p>
+        <form id="settingsForm"></form>
+        <div class="row">
+          <button id="settingsSave" class="primary">Apply</button>
+        </div>
+        <p id="settingsMsg" class="note" hidden></p>
+      </section>
+
+      <section id="tab-health" class="panel" hidden>
+        <div class="row">
+          <button id="retry">Reconnect now</button>
+        </div>
+        <dl class="kv" id="healthList"></dl>
+      </section>
+    </aside>
+  </main>
+  <script src="/static/app.js"></script>
+</body>
+</html>

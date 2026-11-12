@@ -1,0 +1,76 @@
+# Copy to config.toml (./setup.sh does this) and set camera.host.
+# config.toml is gitignored. Camera credentials never go in this file; see the
+# README section "Credentials".
+#
+# Every numeric default below is a starting hypothesis to validate, not a
+# certified value. See docs/VALIDATION.md.
+
+[camera]
+name = "living_room_cam"
+host = "CAMERA_IP_HERE"
+port = 554
+path = "/stream1"          # measured 2304x1296 at 15 fps; "/stream2" is 1280x720 at about 11 fps
+transport = "tcp"          # "tcp" or "udp"
+rotation_deg = 0           # 0, 90, 180, or 270; applied before calibration
+open_timeout_s = 8.0
+read_timeout_s = 3.0       # also bounds how long stop can wait on a dead stream
+reconnect_max_backoff_s = 30.0
+auth_max_attempts = 3      # then wait for the UI Retry button, to avoid lockouts
+
+[credentials]
+backend = "keychain"       # "keychain" or "file"
+service = "acacia-camera"
+file = "secrets.local.toml"
+
+[server]
+host = "127.0.0.1"         # loopback only; other values are refused in phase 1
+port = 8765
+ui_fps = 10.0
+jpeg_quality = 72
+
+[detector]
+model = "yolox_m"          # see `./acacia model list`
+provider = "auto"          # "auto", "cpu", or "coreml"
+inference_interval_s = 0.25
+min_confidence = 0.20      # below this a box is discarded
+dog_confidence = 0.40      # below this a dog box can never count as ON evidence
+person_confidence = 0.35
+nms_iou = 0.45
+context_classes = ["cat", "sheep", "cow", "bear", "teddy bear"]  # shown only, never scored
+
+[classifier]
+on_support = 0.60          # support score needed for ON evidence
+ambiguous_support = 0.20   # support at or above this is AMBIGUOUS, not floor
+ambiguous_box_overlap = 0.35
+occlusion_fraction = 0.30  # person cover of a dog's lower band that voids its footpoint
+min_visible_fraction = 0.50
+lost_min_visible_fraction = 0.95
+
+[state]
+on_confirm_s = 3.0
+clear_confirm_s = 5.0
+lost_clear_s = 60.0
+evidence_gap_s = 1.5
+hold_s = 10.0
+stale_timeout_s = 3.0
+recovery_warmup_s = 2.0
+
+[retention]
+max_events = 20000
+max_age_days = 30
+metrics_interval_s = 60.0
+log_max_bytes = 5000000
+log_backups = 3
+
+# Optional voice cue through a private Alexa skill. See alexa/README.md.
+# The app always starts disarmed. While disarmed it only logs what it would do.
+[cue]
+enabled = false            # true needs the deployed skill and cue.endpoint
+endpoint = ""              # Lambda Function URL, from the stack outputs
+cooldown_s = 600.0         # minimum time between plays
+max_per_day = 6
+quiet_start = "22:00"      # local time; nothing plays in this window
+quiet_end = "07:00"
+silent_when_people = true  # stay silent if a person was seen recently
+people_clear_s = 30.0      # how recently counts as "people in view"
+clear_after_s = 35.0       # sensor reset delay; Amazon requires at least 30

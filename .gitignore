@@ -1,0 +1,36 @@
+# Secrets and machine-local settings
+secrets.local.toml
+*.secret
+*.key
+*.crt
+*.pem
+config.toml
+
+# Runtime data: events, calibration, logs, models
+data/
+models/
+
+# Media must never be committed
+*.[mM][pP]4
+*.[mM][kK][vV]
+*.[mM][oO][vV]
+*.[aA][vV][iI]
+*.h264
+*.jpg
+*.jpeg
+*.png
+
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+build/
+dist/
+
+# OS
+.DS_Store
+
+# Local editor and agent settings
+.claude/

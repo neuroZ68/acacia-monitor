@@ -1,0 +1,152 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >
+  Private Acacia skill: one Lambda, one DynamoDB item, one private bucket for the
+  voice clip. Deploy in us-east-1, which is the Alexa region for North America.
+
+Parameters:
+  SensorSkillId:
+    Type: String
+    Default: ""
+    Description: Smart Home skill ID (amzn1.ask.skill...). Alexa cannot call the function until this is set.
+    AllowedPattern: "^$|^amzn1\\.ask\\.skill\\..+"
+  VoiceSkillId:
+    Type: String
+    Default: ""
+    Description: Custom skill ID. Leave empty until stage 2 of alexa/README.md.
+  ClipKey:
+    Type: String
+    Default: ""
+    Description: Object key of the voice clip in the bucket. Empty until it is uploaded.
+
+Conditions:
+  HasSensorSkill: !Not [!Equals [!Ref SensorSkillId, ""]]
+  HasVoiceSkill: !Not [!Equals [!Ref VoiceSkillId, ""]]
+
+Resources:
+  State:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: pk
+          AttributeType: S
+      KeySchema:
+        - AttributeName: pk
+          KeyType: HASH
+
+  Clips:
+    Type: AWS::S3::Bucket
+    Properties:
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+
+  Role:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: acacia-least-privilege
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - dynamodb:GetItem
+                  - dynamodb:PutItem
+                Resource: !GetAtt State.Arn
+              - Effect: Allow
+                Action: s3:GetObject
+                Resource: !Sub "${Clips.Arn}/*"
+              - Effect: Allow
+                Action: ssm:GetParameter
+                Resource: !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/acacia/*"
+
+  Function:
+    Type: AWS::Lambda::Function
+    Properties:
+      Runtime: python3.13
+      Handler: lambda_function.lambda_handler
+      Timeout: 15
+      MemorySize: 512  # CPU scales with memory; at 128 MB a cold start took 6 to 7 s
+      Role: !GetAtt Role.Arn
+      Environment:
+        Variables:
+          TABLE_NAME: !Ref State
+          CLIP_BUCKET: !Ref Clips
+          CLIP_KEY: !Ref ClipKey
+          SKILL_ID: !Ref VoiceSkillId
+      Code:
+        ZipFile: |
+          def lambda_handler(event, context):
+              raise RuntimeError("Upload alexa/lambda_function.py to this function")
+
+  SmartHomePermission:
+    Type: AWS::Lambda::Permission
+    Condition: HasSensorSkill
+    Properties:
+      FunctionName: !Ref Function
+      Action: lambda:InvokeFunction
+      Principal: alexa-connectedhome.amazon.com
+      EventSourceToken: !Ref SensorSkillId
+
+  VoiceSkillPermission:
+    Type: AWS::Lambda::Permission
+    Condition: HasVoiceSkill
+    Properties:
+      FunctionName: !Ref Function
+      Action: lambda:InvokeFunction
+      Principal: alexa-appkit.amazon.com
+      EventSourceToken: !Ref VoiceSkillId
+
+  # Reachable from the internet by design, because the Mac has no AWS identity.
+  # Every request must carry an HMAC signature, checked in lambda_function.py.
+  TriggerUrl:
+    Type: AWS::Lambda::Url
+    Properties:
+      TargetFunctionArn: !GetAtt Function.Arn
+      AuthType: NONE
+
+  TriggerUrlPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref Function
+      Action: lambda:InvokeFunctionUrl
+      Principal: "*"
+      FunctionUrlAuthType: NONE
+
+  # Since October 2025 a function URL also needs lambda:InvokeFunction. The
+  # InvokedViaFunctionUrl condition limits this grant to calls through the URL, so
+  # nobody can call the function directly through the Lambda API.
+  TriggerUrlInvokePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref Function
+      Action: lambda:InvokeFunction
+      Principal: "*"
+      InvokedViaFunctionUrl: true
+
+Outputs:
+  FunctionArn:
+    Description: Paste into the endpoint of each skill.
+    Value: !GetAtt Function.Arn
+  TriggerEndpoint:
+    Description: Set as cue.endpoint in config.toml.
+    Value: !GetAtt TriggerUrl.FunctionUrl
+  ClipBucket:
+    Description: Upload the converted voice clip here.
+    Value: !Ref Clips

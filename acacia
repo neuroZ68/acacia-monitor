@@ -1,0 +1,8 @@
+#!/bin/sh
+# Thin wrapper so every command runs inside the project's virtual environment.
+here="$(cd "$(dirname "$0")" && pwd)"
+if [ ! -x "$here/.venv/bin/python" ]; then
+    echo "No .venv found. Run ./setup.sh first." >&2
+    exit 1
+fi
+exec "$here/.venv/bin/python" -m acacia "$@"

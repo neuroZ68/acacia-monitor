@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "acacia-camera"
+version = "0.1.0"
+description = "Passive local detection of a dog on couch cushions from an RTSP camera."
+requires-python = ">=3.12"
+dependencies = [
+    "av",
+    "keyring",
+    "numpy",
+    "onnxruntime",
+    "pillow",
+    "psutil",
+    "starlette",
+    "uvicorn",
+    "websockets",
+]
+
+[project.scripts]
+acacia = "acacia.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+acacia = ["web/static/*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = ["integration: needs ffmpeg and mediamtx on PATH"]
