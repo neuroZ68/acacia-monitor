@@ -9,6 +9,7 @@
 ![Video stays local](https://img.shields.io/badge/video-stays%20local-2E7D32)
 ![Alexa cue](https://img.shields.io/badge/Alexa-optional%20cue-00CAFF?logo=amazonalexa&logoColor=white)
 ![Status: prototype](https://img.shields.io/badge/status-prototype-orange)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
 **Is the dog on the couch?** Acacia Camera watches a home IP camera on your own Mac and answers that question in a local web page, without sending video anywhere.
 
@@ -275,3 +276,7 @@ To remove the test server as well:
 ```bash
 brew uninstall mediamtx
 ```
+
+## License
+
+The code in this repository is released under the [MIT License](LICENSE). The YOLOX model weights are Apache-2.0 and are downloaded by `setup.sh` rather than committed. The PyAV wheel bundles FFmpeg, whose components carry LGPL and GPL terms, which matters only if you distribute a packaged binary. [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) lists every dependency's licence.
