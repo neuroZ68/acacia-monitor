@@ -237,13 +237,20 @@ def test_ingest_status_reports_audio_track_count():
 def test_fake_camera_keeps_its_own_clock_when_sleeps_overshoot(monkeypatch):
     # A busy CI runner oversleeps. If the fake camera's timeline drifted with it,
     # the pipeline tests would see growing backlog and go UNKNOWN for that reason.
+    # A fake clock makes every sleep overshoot by exactly 5 ms, with no real waiting.
     import conftest
 
-    real_sleep = time.sleep
-    monkeypatch.setattr(conftest.time, "sleep", lambda seconds: real_sleep(seconds + 0.005))
-    source = FakeSource(fps=60, frames=60)
+    class OversleepingClock:
+        now = 0.0
+
+        def monotonic(self):
+            return self.now
+
+        def sleep(self, seconds):
+            self.now += seconds + 0.005
+
+    clock = OversleepingClock()
+    monkeypatch.setattr(conftest, "time", clock)
     tracker = BacklogTracker()
-    worst = 0.0
-    for _pixels, _w, _h, pts in source.frames():
-        worst = max(worst, tracker.update(time.monotonic(), pts))
-    assert worst < 0.1
+    backlog = [tracker.update(clock.now, pts) for *_frame, pts in FakeSource(fps=60, frames=60).frames()]
+    assert max(backlog) < 0.01  # summed sleeps would reach about 0.3 s by the last frame
