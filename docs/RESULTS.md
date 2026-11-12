@@ -17,7 +17,7 @@ Headline status: the software is built, it runs on the real camera, and its fail
 | Accuracy counts | PENDING | No trials run |
 | Camera to display delay, raw detection delay | PENDING | Needs manual trials |
 | Real-camera resource use | MEASURED (camera), 40 minutes | Section 6; a longer normal-use soak is still pending |
-| Intel migration requirements | Documented, untested | `docs/MIGRATION.md` |
+| Intel migration requirements | Install and 294 tests pass on GitHub's Intel runner; untested on the MacBook Pro | `docs/MIGRATION.md` |
 | Passive phase 1 | MEASURED (bench) | No actuation code exists; a test pins the route list |
 | Optional voice cue on Alexa | Stage 1 MEASURED (real Alexa+); recorded voice needs original Alexa | Section 8 |
 
