@@ -30,12 +30,18 @@ class FakeSource:
 
     def frames(self):
         count = 0
+        start = time.monotonic()
         while self.limit is None or count < self.limit:
             if self.stall_after is not None and count >= self.stall_after:
                 time.sleep(0.05)
                 continue
-            time.sleep(1 / self.fps)
             count += 1
+            # Pace against a fixed schedule, as a camera's clock does. Adding up
+            # sleeps lets every oversleep on a busy machine accumulate, and the
+            # growing lag then reads as backlog, which correctly forces UNKNOWN.
+            delay = start + count / self.fps - time.monotonic()
+            if delay > 0:
+                time.sleep(delay)
             yield self.pixels, 640, 360, count / self.fps
 
     def close(self):
